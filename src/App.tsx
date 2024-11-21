@@ -8,7 +8,9 @@ const Stack = createStackNavigator();
 
 export type RootStackParamList = {
   Principal: {};
-  CadastroTipoTreino: {};
+  CadastroTipoTreino: {
+    editarTreino?: number;
+  };
 };
 
 export default function App(): React.JSX.Element {

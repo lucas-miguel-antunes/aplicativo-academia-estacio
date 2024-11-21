@@ -6,6 +6,7 @@ import Dados from './Dados.tsx';
 import Cores from '../Cores.ts';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../App.tsx';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const Navegacao = createBottomTabNavigator();
 
@@ -30,11 +31,19 @@ function Principal(props: Props): React.JSX.Element {
       tabBarIconStyle: {
         fontSize: 8,
       },
-      tabBarActiveTintColor: Cores.padrao.accent600,
+      tabBarActiveTintColor: Cores.padrao.primary,
       tabBarInactiveTintColor: Cores.padrao.text,
     }}>
-      <Navegacao.Screen name={"Treinos"} component={Treinos}></Navegacao.Screen>
-      <Navegacao.Screen name={"Histórico"} component={Historico}></Navegacao.Screen>
+      <Navegacao.Screen options={{
+        tabBarIcon: ({color}) => (
+          <Icon name="dumbbell" size={24} color={color}></Icon>
+        ),
+      }} name={"Treinos"} component={Treinos}></Navegacao.Screen>
+      <Navegacao.Screen options={{
+        tabBarIcon: ({color}) => (
+          <Icon name="history" size={24} color={color}></Icon>
+        ),
+      }} name={"Histórico"} component={Historico}></Navegacao.Screen>
       <Navegacao.Screen name={"Dados"} component={Dados}></Navegacao.Screen>
     </Navegacao.Navigator>
   );

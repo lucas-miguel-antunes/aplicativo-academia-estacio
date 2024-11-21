@@ -6,11 +6,12 @@ import {
   View,
 } from 'react-native';
 import Cores from '../Cores.ts';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 type Props = PropsWithChildren<{
   titulo: string;
   elementoIcone?: React.ReactNode;
-  chevron?: boolean;
+  elementoDireita?: React.ReactNode;
   onClick?: () => void;
 }>;
 
@@ -18,7 +19,7 @@ export default function ItemLista(props: Props): React.JSX.Element {
   return (
     <Pressable onPress={() => props.onClick ? props.onClick() : {}}>
       <View style={[styles.card, styles.itemLista]}>
-        {props.elementoIcone && props.elementoIcone}
+        {props.elementoIcone}
         <View style={styles.containerTituloItemLista}>
           <Text
             style={[
@@ -30,27 +31,13 @@ export default function ItemLista(props: Props): React.JSX.Element {
           {props.children}
         </View>
 
-        {props.chevron && (
-          <View style={styles.chevron}>
-            <Text style={styles.textoChevron}>{'>'}</Text>
-          </View>
-        )}
+        {props.elementoDireita}
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  chevron: {
-    height: 64,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textoChevron: {
-    color: Cores.padrao.text,
-    fontSize: 24,
-    fontWeight: '900',
-  },
   card: {
     margin: 8,
     paddingHorizontal: 8,

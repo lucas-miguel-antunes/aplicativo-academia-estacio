@@ -36,6 +36,33 @@ export default class GerenciadorDados {
     await AsyncStorage.setItem('treinos', JSON.stringify(dados));
   }
 
+  async adicionarTreino(treino: Treino): Promise<void> {
+    // Carrega os dados do banco de dados
+    const dados = await this.carregarTreinos();
+    // Adiciona o treino
+    dados.treinos.push(treino);
+    // Salva os dados no banco de dados
+    await this.salvarTreinos(dados);
+  }
+
+  async deletarTreino(id: number): Promise<void> {
+    // Carrega os dados do banco de dados
+    const dados = await this.carregarTreinos();
+    // Remove o treino
+    dados.treinos.splice(id, 1);
+    // Salva os dados no banco de dados
+    await this.salvarTreinos(dados);
+  }
+
+  async editarTreino(id: number, treino: Treino): Promise<void> {
+    // Carrega os dados do banco de dados
+    const dados = await this.carregarTreinos();
+    // Substitui o treino
+    dados.treinos[id] = treino;
+    // Salva os dados no banco de dados
+    await this.salvarTreinos(dados);
+  }
+
   async carregarTreinos(): Promise<ListaTreinos> {
     // Carrega os dados do banco de dados
     const dados = await AsyncStorage.getItem('treinos');

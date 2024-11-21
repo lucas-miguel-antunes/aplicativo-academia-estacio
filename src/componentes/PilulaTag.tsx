@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   textoTag: {
-    color: Cores.padrao.text,
+    color: Cores.padrao.text950,
     flexWrap: 'wrap',
     fontSize: 12,
     flexShrink: 1,

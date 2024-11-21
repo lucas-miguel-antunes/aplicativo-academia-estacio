@@ -1,10 +1,8 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
-  FlatList,
   Pressable,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -15,13 +13,16 @@ import Cores from '../../Cores.ts';
 import PilulaTag from '../../componentes/PilulaTag.tsx';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import GerenciadorDados, {
-  ExercicioTreino, GrupoMuscular,
+  ExercicioTreino,
+  GrupoMuscular,
 } from '../../services/GerenciadorDados.ts';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CadastroTipoTreino'>;
 type ListagemExercicio = ExercicioTreino;
 
 export default function CadastroTipoTreino(props: Props): React.JSX.Element {
+  const editarTreino = props.route.params?.editarTreino;
   const [titulo, setTitulo] = useState('');
   const [letraEscolhida, setLetraEscolhida] = useState('A');
   const [listaExercicios, setListaExercicios] = useState<ListagemExercicio[]>(
@@ -31,6 +32,18 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
     .map(it => it.duracaoSerie * it.series + it.repousoSeries * (it.series - 1))
     .reduce((a, b) => a + b, 0);
   const gerenciadorDados = new GerenciadorDados();
+
+  useEffect(() => {
+      if (editarTreino !== undefined) {
+        gerenciadorDados.carregarTreinos().then(treinos => {
+          const treino = treinos.treinos[editarTreino]!;
+          console.log("Editar treino " + editarTreino + ": ", treino);
+          setTitulo(treino.nomeTreino);
+          setLetraEscolhida(treino.letraTreino);
+          setListaExercicios(treino.listaExercicios);
+        });
+      }
+  }, []);
 
   function adicionarExercicio() {
     setListaExercicios([
@@ -75,20 +88,17 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
   }
 
   async function salvarTreino() {
-    console.log("salvarTreino()");
-    const atual = await gerenciadorDados.carregarTreinos();
-    console.log("carregarTreinos(): ", atual);
-    await gerenciadorDados.salvarTreinos({
-      treinos: [
-        ...atual.treinos,
-        {
-          nomeTreino: titulo,
-          letraTreino: letraEscolhida,
-          listaExercicios: listaExercicios,
-        },
-      ],
-    });
-    console.log("salvarTreinos");
+    console.log('salvarTreino()');
+    const treino = {
+      nomeTreino: titulo,
+      letraTreino: letraEscolhida,
+      listaExercicios: listaExercicios,
+    };
+    if (editarTreino !== undefined) {
+      await gerenciadorDados.editarTreino(editarTreino, treino);
+    } else {
+      await gerenciadorDados.adicionarTreino(treino);
+    }
 
     props.navigation.goBack();
   }
@@ -153,9 +163,10 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
           <Text style={styles.textHeader}>Nome do treino</Text>
           <TextInput
             style={styles.input}
-            placeholderTextColor={Cores.padrao.text700}
+            placeholderTextColor={Cores.padrao.text300}
             placeholder={'Dê um nome para esse treino'}
             onChangeText={setTitulo}
+            value={titulo}
           />
 
           <Text style={styles.textHeader}>Exercícios</Text>
@@ -163,6 +174,7 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
             return (
               <ListagemExercicioComponente
                 index={index}
+                key={index}
                 exercicio={exercicio}
                 onEdit={novoExercicio => alterarExercicio(index, novoExercicio)}
                 onRemove={() => removerExercicio(index)}
@@ -174,7 +186,9 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
             onClick={() => adicionarExercicio()}
             texto="Adicionar exercício"></Button>
           {listaExercicios.length > 0 && (
-            <Button onClick={() => salvarTreino()} texto='Salvar treino'></Button>
+            <Button
+              onClick={() => salvarTreino()}
+              texto="Salvar treino"></Button>
           )}
         </View>
       </ScrollView>
@@ -193,146 +207,125 @@ type ListagemExercicioProps = {
 function ListagemExercicioComponente(props: ListagemExercicioProps) {
   const exercicio = props.exercicio;
   return (
-    <>
-      <View style={styles.card}>
-        <View style={styles.cabecalhoExercicio}>
-          <Text style={styles.textBoldHeader}>Exercício {props.index + 1}</Text>
-          <View style={styles.cabecalhoExercicioIcones}>
-            <Pressable onPress={() => props.onReorder(props.index + 1)}>
-              <Text
-                style={[
-                  styles.cabecalhoExercicioIcone,
-                  {backgroundColor: Cores.padrao.secondary200},
-                ]}>
-                v
-              </Text>
+    <View style={styles.card}>
+      <View style={styles.cabecalhoExercicio}>
+        <Text style={styles.textBoldHeader}>Exercício {props.index + 1}</Text>
+        <View style={styles.cabecalhoExercicioIcones}>
+          {
+            props.index > 0 && <Pressable onPress={() => props.onReorder(props.index - 1)}>
+              <Icon style={{marginHorizontal: 4}} name={'arrow-up'} size={24} color={Cores.padrao.text} />
             </Pressable>
-            <Pressable onPress={() => props.onReorder(props.index - 1)}>
-              <Text
-                style={[
-                  styles.cabecalhoExercicioIcone,
-                  {backgroundColor: Cores.padrao.secondary200},
-                ]}>
-                ^
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => props.onRemove()}>
-              <Text
-                style={[
-                  styles.cabecalhoExercicioIcone,
-                  {backgroundColor: Cores.padrao.primary400},
-                ]}>
-                x
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-        <Text style={styles.textHeader}>Nome do exercício</Text>
-        <TextInput
-          style={styles.input}
-          placeholderTextColor={Cores.padrao.text700}
-          placeholder={'Informe o nome do exercício'}
-          onChangeText={novoNome =>
-            props.onEdit({...exercicio, nomeExercicio: novoNome})
           }
-          value={exercicio.nomeExercicio}
-        />
-
-        <Text style={styles.textHeader}>Séries</Text>
-        <View style={styles.dadosSeries}>
-          <View style={styles.dadosSeriesTituloComponente}>
-            <Text style={styles.textHeader}>Quantidade</Text>
-            <SelecionadorNumero
-              valor={exercicio.series}
-              onChange={novoNumero =>
-                props.onEdit({...exercicio, series: novoNumero})
-              }></SelecionadorNumero>
-          </View>
-          <View style={styles.dadosSeriesTituloComponente}>
-            <Text style={styles.textHeader}>Duração exec.</Text>
-            <TextInput
-              style={styles.input}
-              onChangeText={novoNumero => {
-                let novoNumeroInt = parseInt(novoNumero, 10);
-                if (novoNumeroInt <= 0 || isNaN(novoNumeroInt)) {
-                  novoNumeroInt = 30;
-                }
-                props.onEdit({...exercicio, duracaoSerie: novoNumeroInt});
-              }}
-              placeholder={exercicio.duracaoSerie.toString()}
-              placeholderTextColor={Cores.padrao.text}
-              keyboardType="numeric"
-            />
-          </View>
-          <View style={styles.dadosSeriesTituloComponente}>
-            <Text style={styles.textHeader}>Descanso</Text>
-            <TextInput
-              style={styles.input}
-              onChangeText={novoNumero => {
-                let novoNumeroInt = parseInt(novoNumero, 10);
-                if (novoNumeroInt <= 0 || isNaN(novoNumeroInt)) {
-                  novoNumeroInt = 60;
-                }
-                props.onEdit({...exercicio, repousoSeries: novoNumeroInt});
-              }}
-              placeholder={exercicio.repousoSeries.toString()}
-              placeholderTextColor={Cores.padrao.text}
-              keyboardType="numeric"
-            />
-          </View>
+          <Pressable onPress={() => props.onReorder(props.index + 1)}>
+            <Icon style={{marginHorizontal: 4}} name={'arrow-down'} size={24} color={Cores.padrao.text} />
+          </Pressable>
+          <Pressable onPress={() => props.onRemove()}>
+            <Icon style={{marginHorizontal: 4}} name={'trash'} size={24} color={Cores.padrao.primary400} />
+          </Pressable>
         </View>
-
-        <Text style={styles.textHeader}>Repetições</Text>
-        <View style={styles.dadosSeries}>
-          <View style={styles.dadosSeriesTituloComponente}>
-            <Text style={styles.textHeader}>Mínimo</Text>
-            <SelecionadorNumero
-              valor={exercicio.minRepeticoes}
-              onChange={novoNumero => {
-                if (novoNumero <= exercicio.maxRepeticoes && novoNumero > 0) {
-                  props.onEdit({...exercicio, minRepeticoes: novoNumero});
-                }
-              }}></SelecionadorNumero>
-          </View>
-          <View style={styles.dadosSeriesTituloComponente}>
-            <Text style={styles.textHeader}>Máximo</Text>
-            <SelecionadorNumero
-              valor={exercicio.maxRepeticoes}
-              onChange={novoNumero => {
-                if (novoNumero >= exercicio.minRepeticoes && novoNumero > 0) {
-                  props.onEdit({...exercicio, maxRepeticoes: novoNumero});
-                }
-              }}></SelecionadorNumero>
-          </View>
-        </View>
-
-        <Text style={styles.textHeader}>Grupo Muscular</Text>
-        <ScrollView
-          horizontal={true}
-          style={[styles.card, {marginHorizontal: 0, flexWrap: 'wrap'}]}>
-          <View style={styles.tags}>
-            {Object.keys(GrupoMuscular).map(grupo => {
-              return (
-                <PilulaTag
-                  texto={grupo}
-                  cor={
-                    exercicio.principalGrupoMuscular === grupo
-                      ? Cores.padrao.primary
-                      : Cores.padrao.secondary
-                  }
-                  onClick={() =>
-                    props.onEdit({
-                      ...exercicio,
-                      principalGrupoMuscular: grupo as GrupoMuscular,
-                    })
-                  }></PilulaTag>
-              );
-            })}
-          </View>
-        </ScrollView>
       </View>
-      <View style={styles.separator}></View>
-    </>
+      <Text style={styles.textHeader}>Nome do exercício</Text>
+      <TextInput
+        style={styles.input}
+        placeholderTextColor={Cores.padrao.text300}
+        placeholder={'Informe o nome do exercício'}
+        onChangeText={novoNome =>
+          props.onEdit({...exercicio, nomeExercicio: novoNome})
+        }
+        value={exercicio.nomeExercicio}
+      />
+
+      <Text style={styles.textHeader}>Séries</Text>
+      <View style={styles.dadosSeries}>
+        <View style={styles.dadosSeriesTituloComponente}>
+          <Text style={styles.textHeader}>Quantidade</Text>
+          <SelecionadorNumero
+            valor={exercicio.series}
+            onChange={novoNumero =>
+              props.onEdit({...exercicio, series: novoNumero})
+            }></SelecionadorNumero>
+        </View>
+        <View style={styles.dadosSeriesTituloComponente}>
+          <Text style={styles.textHeader}>Duração exec.</Text>
+          <TextInput
+            style={styles.input}
+            onChangeText={novoNumero => {
+              let novoNumeroInt = parseInt(novoNumero, 10);
+              if (novoNumeroInt <= 0 || isNaN(novoNumeroInt)) {
+                novoNumeroInt = 30;
+              }
+              props.onEdit({...exercicio, duracaoSerie: novoNumeroInt});
+            }}
+            placeholder={exercicio.duracaoSerie.toString()}
+            placeholderTextColor={Cores.padrao.text}
+            keyboardType="numeric"
+          />
+        </View>
+        <View style={styles.dadosSeriesTituloComponente}>
+          <Text style={styles.textHeader}>Descanso</Text>
+          <TextInput
+            style={styles.input}
+            onChangeText={novoNumero => {
+              let novoNumeroInt = parseInt(novoNumero, 10);
+              if (novoNumeroInt <= 0 || isNaN(novoNumeroInt)) {
+                novoNumeroInt = 60;
+              }
+              props.onEdit({...exercicio, repousoSeries: novoNumeroInt});
+            }}
+            placeholder={exercicio.repousoSeries.toString()}
+            placeholderTextColor={Cores.padrao.text}
+            keyboardType="numeric"
+          />
+        </View>
+      </View>
+
+      <Text style={styles.textHeader}>Repetições</Text>
+      <View style={styles.dadosSeries}>
+        <View style={styles.dadosSeriesTituloComponente}>
+          <Text style={styles.textHeader}>Mínimo</Text>
+          <SelecionadorNumero
+            valor={exercicio.minRepeticoes}
+            onChange={novoNumero => {
+              if (novoNumero <= exercicio.maxRepeticoes && novoNumero > 0) {
+                props.onEdit({...exercicio, minRepeticoes: novoNumero});
+              }
+            }}></SelecionadorNumero>
+        </View>
+        <View style={styles.dadosSeriesTituloComponente}>
+          <Text style={styles.textHeader}>Máximo</Text>
+          <SelecionadorNumero
+            valor={exercicio.maxRepeticoes}
+            onChange={novoNumero => {
+              if (novoNumero >= exercicio.minRepeticoes && novoNumero > 0) {
+                props.onEdit({...exercicio, maxRepeticoes: novoNumero});
+              }
+            }}></SelecionadorNumero>
+        </View>
+      </View>
+
+      <Text style={styles.textHeader}>Principal grupo muscular</Text>
+      <ScrollView horizontal={true} style={styles.tagsWrapper}>
+        <View style={styles.tags}>
+          {Object.keys(GrupoMuscular).map(grupo => {
+            return (
+              <PilulaTag
+                texto={grupo}
+                cor={
+                  exercicio.principalGrupoMuscular === grupo
+                    ? Cores.padrao.primary
+                    : Cores.padrao.secondary
+                }
+                onClick={() =>
+                  props.onEdit({
+                    ...exercicio,
+                    principalGrupoMuscular: grupo as GrupoMuscular,
+                  })
+                }></PilulaTag>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -375,6 +368,11 @@ function Button(props: ButtonProps) {
 }
 
 const styles = StyleSheet.create({
+  tagsWrapper: {
+    marginTop: 8,
+    marginHorizontal: 0,
+    flexWrap: 'wrap',
+  },
   tags: {
     flexDirection: 'row',
     flex: 1,
@@ -409,13 +407,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     flexDirection: 'row',
     justifyContent: 'center',
-    backgroundColor: Cores.padrao.primary,
+    backgroundColor: Cores.padrao.secondary,
     borderRadius: 32,
   },
   botaoNumeroSeriesTexto: {
     flex: 1,
     textAlign: 'center',
-    color: Cores.padrao.text,
+    color: Cores.padrao.text950,
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -432,9 +430,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    margin: 8,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    margin: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: Cores.padrao.background,
+    borderRadius: 16,
   },
   btn: {
     margin: 8,
@@ -455,12 +455,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
   },
-  separator: {
-    height: 1,
-    width: '90%',
-    marginHorizontal: '5%',
-    backgroundColor: Cores.padrao.background900,
-  },
   opcaoLetraContainer: {
     width: 48,
     height: 48,
@@ -475,7 +469,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     verticalAlign: 'middle',
-    color: Cores.padrao.text,
+    color: Cores.padrao.text950,
     fontSize: 32,
     fontWeight: 'bold',
   },
@@ -493,7 +487,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtext: {
-    color: Cores.padrao.text700,
+    color: Cores.padrao.text300,
   },
   container: {
     margin: 16,
@@ -505,7 +499,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 32,
     paddingHorizontal: 16,
-    borderColor: Cores.padrao.background700,
+    borderColor: Cores.padrao.background300,
     flex: 1,
   },
 });

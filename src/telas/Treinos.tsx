@@ -1,6 +1,7 @@
 import {
   FlatList,
-  Pressable, RefreshControl,
+  Pressable,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import {RootStackParamList} from '../App.tsx';
 import ItemLista from '../componentes/ItemLista.tsx';
 import PilulaTag from '../componentes/PilulaTag.tsx';
 import GerenciadorDados, {Treino} from '../services/GerenciadorDados.ts';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 type ListagemTipoTreino = Treino;
 
@@ -28,15 +30,24 @@ type Props = CompositeScreenProps<
 export default function Treinos({navigation}: Props) {
   let [treinos, setTreinos] = useState<Treino[]>();
   let [refreshing, setRefreshing] = useState<boolean>(false);
+  let [editing, setEditing] = useState<boolean>(false);
 
   function carregarTreinos() {
     setRefreshing(true);
-    new GerenciadorDados()
-      .carregarTreinos()
-      .then(treinos => {
-        setTreinos(treinos.treinos);
-        setRefreshing(false);
-      });
+    new GerenciadorDados().carregarTreinos().then(treinos => {
+      setTreinos(treinos.treinos);
+      setRefreshing(false);
+    });
+  }
+
+  function deletarTreino(index: number) {
+    new GerenciadorDados().deletarTreino(index).then(() => carregarTreinos());
+  }
+
+  function editarTreino(index: number) {
+    navigation.push('CadastroTipoTreino', {
+      editarTreino: index,
+    });
   }
 
   useEffect(() => {
@@ -50,49 +61,81 @@ export default function Treinos({navigation}: Props) {
           data={[...treinos, {adicionarAdividade: true}]}
           renderItem={item =>
             item.item.adicionarAdividade ? (
-              <NovoCadastroTipoTreino
-                onClick={() =>
-                  navigation.push('CadastroTipoTreino', {})
-                }></NovoCadastroTipoTreino>
+              <>
+                {editing ? (
+                  <Button
+                    name="Cancelar"
+                    onClick={() => setEditing(false)}></Button>
+                ) : (
+                  <Button
+                    name="Editar atividade"
+                    onClick={() => setEditing(true)}></Button>
+                )}
+                <Button
+                  name="Adicionar atividade"
+                  onClick={() =>
+                    navigation.push('CadastroTipoTreino', {})
+                  }></Button>
+              </>
             ) : (
-              <ItemListaTiposTreino treino={item.item}></ItemListaTiposTreino>
+              <ItemListaTiposTreino
+                id={item.index}
+                onDelete={() => deletarTreino(item.index)}
+                onEdit={() => editarTreino(item.index)}
+                editing={editing}
+                treino={item.item}></ItemListaTiposTreino>
             )
           }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => carregarTreinos()}/>
-        }></FlatList>
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => carregarTreinos()}
+            />
+          }></FlatList>
       ) : (
-        <NovoCadastroTipoTreino
-          onClick={() =>
-            navigation.push('CadastroTipoTreino', {})
-          }></NovoCadastroTipoTreino>
+        <Button
+          name="Adicionar atividade"
+          onClick={() => navigation.push('CadastroTipoTreino', {})}></Button>
       )}
     </SafeAreaView>
   );
 }
 
-type NovoCadastroTipoTreinoProps = {
+type ButtonProps = {
+  name: string;
   onClick: () => void;
 };
 
-function NovoCadastroTipoTreino(props: NovoCadastroTipoTreinoProps) {
+function Button(props: ButtonProps) {
   return (
     <Pressable onPress={() => props.onClick()}>
       <View style={[styles.card, styles.novaAtividade]}>
-        <Text style={styles.novaAtividadeTexto}>Criar novo treino</Text>
+        <Text style={styles.novaAtividadeTexto}>{props.name}</Text>
       </View>
     </Pressable>
   );
 }
 
-function ItemListaTiposTreino(props: {treino: ListagemTipoTreino}) {
+type ItemListaTiposTreinoProps = {
+  editing: boolean;
+  treino: ListagemTipoTreino;
+  id: number;
+  onDelete: () => void;
+  onEdit: () => void;
+};
+
+function ItemListaTiposTreino(props: ItemListaTiposTreinoProps) {
   const treino = props.treino;
-  const gruposMusculares = [...new Set(props.treino.listaExercicios.map(it => it.principalGrupoMuscular))];
+  const editando = props.editing;
+  const gruposMusculares = [
+    ...new Set(
+      props.treino.listaExercicios.map(it => it.principalGrupoMuscular),
+    ),
+  ];
   const tempoTotal = treino.listaExercicios
     .map(it => it.duracaoSerie * it.series + it.repousoSeries * (it.series - 1))
     .reduce((a, b) => a + b, 0);
+
   return (
     <>
       <ItemLista
@@ -102,12 +145,41 @@ function ItemListaTiposTreino(props: {treino: ListagemTipoTreino}) {
             <Text style={styles.letraTreino}>{treino.letraTreino}</Text>
           </View>
         }
-        chevron={true}>
+        elementoDireita={
+          <View style={styles.chevron}>
+            {editando ? (
+              <>
+                <Icon
+                  onPress={() => props.onEdit()}
+                  name={'pencil'}
+                  size={24}
+                  color={Cores.padrao.text}
+                />
+                <Icon
+                  onPress={() => props.onDelete()}
+                  name={'trash'}
+                  size={24}
+                  color={Cores.padrao.text}
+                />
+              </>
+            ) : (
+              <Icon
+                name={'chevron-right'}
+                size={24}
+                color={Cores.padrao.text}
+              />
+            )}
+          </View>
+        }>
         <View style={styles.tags}>
-          <PilulaTag texto={`${treino.listaExercicios.length} exercícios`} cor={Cores.padrao.primary}></PilulaTag>
-          <PilulaTag texto={`${Math.ceil(tempoTotal / 60)} minutos`} cor={Cores.padrao.primary}></PilulaTag>
+          <PilulaTag
+            texto={`${treino.listaExercicios.length} exercícios`}
+            cor={Cores.padrao.primary}></PilulaTag>
+          <PilulaTag
+            texto={`${Math.ceil(tempoTotal / 60)} minutos`}
+            cor={Cores.padrao.primary}></PilulaTag>
         </View>
-        <View style={styles.tags}>
+        <View style={[styles.tags, {marginTop: 8}]}>
           {gruposMusculares.map(grupo => (
             <PilulaTag texto={grupo} cor={Cores.padrao.secondary}></PilulaTag>
           ))}
@@ -119,6 +191,11 @@ function ItemListaTiposTreino(props: {treino: ListagemTipoTreino}) {
 }
 
 const styles = StyleSheet.create({
+  chevron: {
+    height: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   containerLetraTreino: {
     width: 48,
     height: 48,
@@ -136,6 +213,7 @@ const styles = StyleSheet.create({
     color: Cores.padrao.text,
     fontSize: 32,
     fontWeight: 'bold',
+    color: Cores.padrao.text950,
   },
   tags: {
     flexDirection: 'row',
