@@ -1,6 +1,6 @@
 import {SafeAreaView, Text, View} from 'react-native';
 
-export default function Competicoes() {
+export default function Historico() {
   return (
     <SafeAreaView>
       <View>
