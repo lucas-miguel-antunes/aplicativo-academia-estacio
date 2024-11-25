@@ -17,6 +17,7 @@ import GerenciadorDados, {
   GrupoMuscular,
 } from '../../services/GerenciadorDados.ts';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import {SelecionadorNumero} from '../../componentes/SelecionadorNumero.tsx';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CadastroTipoTreino'>;
 type ListagemExercicio = ExercicioTreino;
@@ -34,15 +35,15 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
   const gerenciadorDados = new GerenciadorDados();
 
   useEffect(() => {
-      if (editarTreino !== undefined) {
-        gerenciadorDados.carregarTreinos().then(treinos => {
-          const treino = treinos.treinos[editarTreino]!;
-          console.log("Editar treino " + editarTreino + ": ", treino);
-          setTitulo(treino.nomeTreino);
-          setLetraEscolhida(treino.letraTreino);
-          setListaExercicios(treino.listaExercicios);
-        });
-      }
+    if (editarTreino !== undefined) {
+      gerenciadorDados.carregarTreinos().then(treinos => {
+        const treino = treinos.treinos[editarTreino]!;
+        console.log('Editar treino ' + editarTreino + ': ', treino);
+        setTitulo(treino.nomeTreino);
+        setLetraEscolhida(treino.letraTreino);
+        setListaExercicios(treino.listaExercicios);
+      });
+    }
   }, []);
 
   function adicionarExercicio() {
@@ -329,29 +330,6 @@ function ListagemExercicioComponente(props: ListagemExercicioProps) {
   );
 }
 
-type SelecionadorNumeroProps = {
-  valor: number;
-  onChange: (novoValor: number) => void;
-};
-
-function SelecionadorNumero(props: SelecionadorNumeroProps) {
-  return (
-    <View style={styles.selecionadorValor}>
-      <Pressable
-        style={styles.botaoNumeroSeries}
-        onPress={() => props.onChange(props.valor - 1)}>
-        <Text style={styles.botaoNumeroSeriesTexto}>-</Text>
-      </Pressable>
-      <Text style={styles.textoCentralizado}>{props.valor}</Text>
-      <Pressable
-        style={styles.botaoNumeroSeries}
-        onPress={() => props.onChange(props.valor + 1)}>
-        <Text style={styles.botaoNumeroSeriesTexto}>+</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 type ButtonProps = {
   texto: string;
   onClick: () => void;
@@ -399,28 +377,6 @@ const styles = StyleSheet.create({
     verticalAlign: 'middle',
     flex: 1,
     justifyContent: 'space-around',
-  },
-  botaoNumeroSeries: {
-    width: 32,
-    height: 32,
-    margin: 8,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    backgroundColor: Cores.padrao.secondary,
-    borderRadius: 32,
-  },
-  botaoNumeroSeriesTexto: {
-    flex: 1,
-    textAlign: 'center',
-    color: Cores.padrao.text950,
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  textoCentralizado: {
-    height: 48,
-    textAlign: 'center',
-    verticalAlign: 'middle',
   },
   dadosSeries: {
     flexDirection: 'row',

@@ -52,6 +52,8 @@ const styles = StyleSheet.create({
   },
   tituloItemLista: {
     color: Cores.padrao.text,
-    fontSize: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
 });

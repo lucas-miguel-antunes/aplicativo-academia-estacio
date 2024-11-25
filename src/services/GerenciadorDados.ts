@@ -30,41 +30,67 @@ export type ListaTreinos = {
   treinos: Treino[];
 };
 
+export type SerieExercicioSessao = {
+  peso: number;
+  repeticoes: number;
+  duracao: number;
+  repouso: number;
+};
+
+export type ExercicioSessao = {
+  exercicio: number;
+  series: SerieExercicioSessao[];
+};
+
+export type SessaoTreino = {
+  data: Date;
+  treino: number;
+  exercicios: ExercicioSessao[];
+};
+
 export default class GerenciadorDados {
+  async carregarSessoesTreino(): Promise<{sessoes: SessaoTreino[]}> {
+    const dados = await AsyncStorage.getItem('sessoesTreino');
+    if (dados) {
+      return JSON.parse(dados);
+    } else {
+      return {sessoes: []};
+    }
+  }
+
+  async salvarSessoesTreino(dados: {sessoes: SessaoTreino[]}): Promise<void> {
+    await AsyncStorage.setItem('sessoesTreino', JSON.stringify(dados));
+  }
+
+  async cadastrarSessaoTreino(sessao: SessaoTreino): Promise<void> {
+    const dados = await this.carregarSessoesTreino();
+    dados.sessoes.push(sessao);
+    await this.salvarSessoesTreino(dados);
+  }
+
   async salvarTreinos(dados: ListaTreinos): Promise<void> {
-    // Salva os dados no banco de dados
     await AsyncStorage.setItem('treinos', JSON.stringify(dados));
   }
 
   async adicionarTreino(treino: Treino): Promise<void> {
-    // Carrega os dados do banco de dados
     const dados = await this.carregarTreinos();
-    // Adiciona o treino
     dados.treinos.push(treino);
-    // Salva os dados no banco de dados
     await this.salvarTreinos(dados);
   }
 
   async deletarTreino(id: number): Promise<void> {
-    // Carrega os dados do banco de dados
     const dados = await this.carregarTreinos();
-    // Remove o treino
     dados.treinos.splice(id, 1);
-    // Salva os dados no banco de dados
     await this.salvarTreinos(dados);
   }
 
   async editarTreino(id: number, treino: Treino): Promise<void> {
-    // Carrega os dados do banco de dados
     const dados = await this.carregarTreinos();
-    // Substitui o treino
     dados.treinos[id] = treino;
-    // Salva os dados no banco de dados
     await this.salvarTreinos(dados);
   }
 
   async carregarTreinos(): Promise<ListaTreinos> {
-    // Carrega os dados do banco de dados
     const dados = await AsyncStorage.getItem('treinos');
     if (dados) {
       return JSON.parse(dados);

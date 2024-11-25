@@ -19,6 +19,7 @@ import ItemLista from '../componentes/ItemLista.tsx';
 import PilulaTag from '../componentes/PilulaTag.tsx';
 import GerenciadorDados, {Treino} from '../services/GerenciadorDados.ts';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import ItemListaTreino from '../componentes/ItemListaTreino.tsx';
 
 type ListagemTipoTreino = Treino;
 
@@ -47,6 +48,14 @@ export default function Treinos({navigation}: Props) {
   function editarTreino(index: number) {
     navigation.push('CadastroTipoTreino', {
       editarTreino: index,
+    });
+  }
+
+  function abrirTreino(index: number) {
+    console.log('abrirTreino', index);
+    navigation.push('CadastroSessaoTreino', {
+      idTreino: index,
+      treino: treinos![index],
     });
   }
 
@@ -79,9 +88,11 @@ export default function Treinos({navigation}: Props) {
               </>
             ) : (
               <ItemListaTiposTreino
+                key={item.index}
                 id={item.index}
                 onDelete={() => deletarTreino(item.index)}
                 onEdit={() => editarTreino(item.index)}
+                onOpen={() => abrirTreino(item.index)}
                 editing={editing}
                 treino={item.item}></ItemListaTiposTreino>
             )
@@ -122,6 +133,7 @@ type ItemListaTiposTreinoProps = {
   id: number;
   onDelete: () => void;
   onEdit: () => void;
+  onOpen: () => void;
 };
 
 function ItemListaTiposTreino(props: ItemListaTiposTreinoProps) {
@@ -137,56 +149,49 @@ function ItemListaTiposTreino(props: ItemListaTiposTreinoProps) {
     .reduce((a, b) => a + b, 0);
 
   return (
-    <>
-      <ItemLista
-        titulo={treino.nomeTreino}
-        elementoIcone={
-          <View style={styles.containerLetraTreino}>
-            <Text style={styles.letraTreino}>{treino.letraTreino}</Text>
-          </View>
-        }
-        elementoDireita={
-          <View style={styles.chevron}>
-            {editando ? (
-              <>
-                <Icon
-                  onPress={() => props.onEdit()}
-                  name={'pencil'}
-                  size={24}
-                  color={Cores.padrao.text}
-                />
-                <Icon
-                  onPress={() => props.onDelete()}
-                  name={'trash'}
-                  size={24}
-                  color={Cores.padrao.text}
-                />
-              </>
-            ) : (
+    <ItemListaTreino
+      treino={treino}
+      onOpen={() => props.onOpen()}
+      elementoDireita={
+        <View style={styles.chevron}>
+          {editando ? (
+            <>
               <Icon
-                name={'chevron-right'}
+                onPress={() => props.onEdit()}
+                name={'pencil'}
                 size={24}
                 color={Cores.padrao.text}
               />
-            )}
-          </View>
-        }>
-        <View style={styles.tags}>
-          <PilulaTag
-            texto={`${treino.listaExercicios.length} exercícios`}
-            cor={Cores.padrao.primary}></PilulaTag>
-          <PilulaTag
-            texto={`${Math.ceil(tempoTotal / 60)} minutos`}
-            cor={Cores.padrao.primary}></PilulaTag>
+              <Icon
+                onPress={() => props.onDelete()}
+                name={'trash'}
+                size={24}
+                color={Cores.padrao.text}
+              />
+            </>
+          ) : (
+            <Icon
+              name={'chevron-right'}
+              size={24}
+              color={Cores.padrao.text}
+            />
+          )}
         </View>
-        <View style={[styles.tags, {marginTop: 8}]}>
-          {gruposMusculares.map(grupo => (
-            <PilulaTag texto={grupo} cor={Cores.padrao.secondary}></PilulaTag>
-          ))}
-        </View>
-      </ItemLista>
-      <View style={styles.separator}></View>
-    </>
+      }>
+      <View style={styles.tags}>
+        <PilulaTag
+          texto={`${treino.listaExercicios.length} exercícios`}
+          cor={Cores.padrao.primary}></PilulaTag>
+        <PilulaTag
+          texto={`${Math.ceil(tempoTotal / 60)} minutos`}
+          cor={Cores.padrao.primary}></PilulaTag>
+      </View>
+      <View style={[styles.tags, {marginTop: 8}]}>
+        {gruposMusculares.map((grupo, index) => (
+          <PilulaTag key={index} texto={grupo} cor={Cores.padrao.secondary}></PilulaTag>
+        ))}
+      </View>
+    </ItemListaTreino>
   );
 }
 
