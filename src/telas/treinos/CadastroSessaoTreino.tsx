@@ -1,5 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {
+  Alert,
+  BackHandler,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -15,6 +17,7 @@ import ItemListaTreino from '../../componentes/ItemListaTreino.tsx';
 import Cores from '../../Cores.ts';
 import {
   ExercicioSessao,
+  ExercicioTreino,
   SerieExercicioSessao,
   Treino,
 } from '../../services/GerenciadorDados.ts';
@@ -57,6 +60,41 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
     setExercicios(novosExercicios);
   }
 
+  const handleBackButtonClick = () => {
+    Alert.alert('Sair do treino?', 'Progresso atual será perdido.', [
+      {
+        text: 'Cancelar',
+        onPress: () => {},
+      },
+      {
+        text: 'Sair',
+        onPress: () => props.navigation.goBack(),
+      },
+    ]);
+
+    return true;
+  };
+
+  useEffect(() => {
+    const eventHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackButtonClick,
+    );
+    return () => eventHandler.remove();
+  }, []);
+
+  function terminarExercicioAtual(novoTreinoAtual: CadastroExercicioAtual) {
+    setUltimoExercicio(cadastroTreinoAtual.exercicio);
+    setCadastroTreinoAtual(novoTreinoAtual);
+    setExercicios([
+      ...exercicios,
+      {
+        exercicio: cadastroTreinoAtual.exercicio!,
+        series: cadastroTreinoAtual.seriesConsolidadas,
+      },
+    ]);
+  }
+
   return (
     <SafeAreaView>
       <ScrollView style={styles.container}>
@@ -64,7 +102,11 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
           <ItemListaTreino treino={treino} />
         </View>
 
-        <BarraProgressoExercicios exercicios={exercicios} treino={treino} />
+        <BarraProgressoExercicios
+          exerciciosFinalizados={exercicios}
+          treino={treino}
+          exercicioAtual={cadastroTreinoAtual}
+        />
 
         <CadastroExercicioAtualComponent
           treino={treino}
@@ -73,28 +115,61 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
           onChange={novo => {
             setCadastroTreinoAtual(novo);
           }}
-          onFinish={() => {
-            setUltimoExercicio(cadastroTreinoAtual.exercicio);
-            setCadastroTreinoAtual({
+          onFinish={() =>
+            terminarExercicioAtual({
               seriesConsolidadas: [],
               estadoAtual: CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
-            });
-            setExercicios([...exercicios, {
-              exercicio: cadastroTreinoAtual.exercicio!,
-              series: cadastroTreinoAtual.seriesConsolidadas,
-            }]);
-          }}
+            })
+          }
         />
 
         {treino.listaExercicios.map((exercicio, index) => {
-          const execucao = exercicios[index];
           return (
             <CardExercicio
               key={index}
-              exercicio={execucao}
-              onExercicioChange={novoExercicio =>
-                alterarExercicio(novoExercicio, index)
-              }
+              exercicio={exercicio}
+              exercicioSessao={exercicios.find(it => it.exercicio === index)}
+              onChange={novaSessao => {
+                alterarExercicio(novaSessao, index);
+              }}
+              onClick={() => {
+                if (cadastroTreinoAtual.exercicio === index) {
+                  return;
+                }
+                if (
+                  cadastroTreinoAtual.exercicio !== undefined &&
+                  cadastroTreinoAtual.estadoAtual !==
+                    CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE
+                ) {
+                  Alert.alert(
+                    'Trocar de exercício?',
+                    'Isso vai finalizar o exercício atual.',
+                    [
+                      {
+                        text: 'Cancelar',
+                        onPress: () => {},
+                      },
+                      {
+                        text: 'Trocar',
+                        onPress: () =>
+                          terminarExercicioAtual({
+                            exercicio: index,
+                            seriesConsolidadas: [],
+                            estadoAtual:
+                              CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
+                          }),
+                      },
+                    ],
+                  );
+                } else {
+                  setCadastroTreinoAtual({
+                    exercicio: index,
+                    seriesConsolidadas: [],
+                    estadoAtual:
+                      CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
+                  });
+                }
+              }}
             />
           );
         })}
@@ -124,6 +199,46 @@ function Button(props: ButtonProps) {
   );
 }
 
+type ItemListaExercicioProps = {
+  exercicio: ExercicioTreino;
+  onClick?: () => void;
+};
+
+function ItemListaExercicio(props: ItemListaExercicioProps) {
+  return (
+    <ItemLista
+      titulo={props.exercicio.nomeExercicio}
+      onClick={props.onClick}
+      elementoDireita={
+        props.onClick ? (
+          <View style={styles.chevron}>
+            <Icon name={'chevron-right'} size={24} color={Cores.padrao.text} />
+          </View>
+        ) : (
+          <></>
+        )
+      }
+      elementoIcone={
+        <View style={styles.containerIconeExercicioAtual}>
+          <Icon
+            style={{marginLeft: 2}}
+            name={'arm-flex'}
+            size={32}
+            color={Cores.padrao.background}
+          />
+        </View>
+      }>
+      <Text style={styles.text}>
+        {props.exercicio.series} séries de {props.exercicio.minRepeticoes} a{' '}
+        {props.exercicio.maxRepeticoes} repetições
+      </Text>
+      <Text style={styles.text}>
+        Repouso de {props.exercicio.repousoSeries} segundos entre séries
+      </Text>
+    </ItemLista>
+  );
+}
+
 type CadastroExercicioAtualComponentProps = {
   treino: Treino;
   cadastroTreinoAtual: CadastroExercicioAtual;
@@ -136,33 +251,17 @@ function CadastroExercicioAtualComponent(
   props: CadastroExercicioAtualComponentProps,
 ) {
   const numeroExercicioAtual =
-    props.cadastroTreinoAtual.exercicio !== undefined ? props.cadastroTreinoAtual.exercicio
-      : props.ultimoExercicio !== undefined ? props.ultimoExercicio + 1 : 0;
+    props.cadastroTreinoAtual.exercicio !== undefined
+      ? props.cadastroTreinoAtual.exercicio
+      : props.ultimoExercicio !== undefined
+      ? props.ultimoExercicio + 1
+      : 0;
   const exercicioAtual = props.treino.listaExercicios[numeroExercicioAtual];
 
   return (
     <View style={[styles.padding16, styles.card]}>
       <Text style={styles.text}>Exercício atual</Text>
-      <ItemLista
-        titulo={exercicioAtual.nomeExercicio}
-        elementoIcone={
-          <View style={styles.containerIconeExercicioAtual}>
-            <Icon
-              style={{marginLeft: 2}}
-              name={'arm-flex'}
-              size={32}
-              color={Cores.padrao.background}
-            />
-          </View>
-        }>
-        <Text style={styles.text}>
-          {exercicioAtual.series} séries de {exercicioAtual.minRepeticoes} a{' '}
-          {exercicioAtual.maxRepeticoes} repetições
-        </Text>
-        <Text style={styles.text}>
-          Repouso de {exercicioAtual.repousoSeries} segundos entre séries
-        </Text>
-      </ItemLista>
+      <ItemListaExercicio exercicio={exercicioAtual} />
       <CadastroExercicioAtualActions
         cadastroTreinoAtual={props.cadastroTreinoAtual}
         treino={props.treino}
@@ -206,209 +305,370 @@ function CadastroExercicioAtualActions(
   switch (props.cadastroTreinoAtual.estadoAtual) {
     case CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE:
       return (
-        <View style={styles.column}>
-          <Button
-            nome={'Começar série'}
-            onPress={() => {
-              props.onChange({
-                ...props.cadastroTreinoAtual,
-                estadoAtual: CadastroExercicioAtualEstado.SERIE,
-                ultimoTimestamp: new Date(),
-              });
-            }}
-          />
-        </View>
+        <ExercicioAtualPreparar
+          onChange={props.onChange}
+          onFinish={props.onFinish}
+          cadastroTreinoAtual={props.cadastroTreinoAtual}
+          treino={props.treino}
+        />
       );
     case CadastroExercicioAtualEstado.SERIE:
-      const tempoExecucao = calcularTempoSegundos(
-        props.cadastroTreinoAtual.ultimoTimestamp!,
-      );
       return (
-        <>
-          <Text style={styles.estadoHeader}>Tempo de execução</Text>
-          <Text style={styles.stopwatchTimer}>
-            {formatarTempo(tempoExecucao)}
-          </Text>
-          <Button
-            nome="Terminar execução"
-            onPress={() => {
-              props.onChange({
-                ...props.cadastroTreinoAtual,
-                seriesConsolidadas: [
-                  ...props.cadastroTreinoAtual.seriesConsolidadas,
-                  {
-                    peso: 0,
-                    repeticoes: 0,
-                    repouso: 0,
-                    duracao: calcularTempoSegundos(
-                      props.cadastroTreinoAtual.ultimoTimestamp!,
-                    ),
-                  },
-                ],
-                estadoAtual: CadastroExercicioAtualEstado.REPOUSO,
-                ultimoTimestamp: new Date(),
-              });
-            }}></Button>
-        </>
+        <ExercicioAtualExecucao
+          onChange={props.onChange}
+          onFinish={props.onFinish}
+          cadastroTreinoAtual={props.cadastroTreinoAtual}
+          treino={props.treino}
+        />
       );
     case CadastroExercicioAtualEstado.REPOUSO:
-      const tempoEsperando = calcularTempoSegundos(
-        props.cadastroTreinoAtual.ultimoTimestamp!,
-      );
-      const exercicio =
-        props.treino.listaExercicios[props.cadastroTreinoAtual.exercicio!];
-      const repouso = exercicio.repousoSeries;
-      const tempoRestante = repouso - tempoEsperando;
-
-      const finalDeExercicio =
-        props.cadastroTreinoAtual.seriesConsolidadas.length ===
-        exercicio.series;
-      const indiceSerieAtual =
-        props.cadastroTreinoAtual.seriesConsolidadas.length - 1;
-      const serieAtual =
-        props.cadastroTreinoAtual.seriesConsolidadas[indiceSerieAtual];
-
-      function alterarPropriedadesSerie(serie: SerieExercicioSessao) {
-        const novaSerie = [...props.cadastroTreinoAtual.seriesConsolidadas];
-        novaSerie[indiceSerieAtual] = serie;
-        props.onChange({
-          ...props.cadastroTreinoAtual,
-          seriesConsolidadas: novaSerie,
-        });
-      }
-
       return (
-        <>
-          <Text style={styles.estadoHeader}>Repouso</Text>;
-          <Text
-            style={[
-              styles.estadoHeader,
-              {
-                color:
-                  tempoRestante < 0
-                    ? Cores.padrao.primary
-                    : Cores.padrao.text300,
-              },
-            ]}>
-            {tempoRestante < 0 ? '-' : ''}
-            {formatarTempo(Math.abs(tempoRestante))}
-          </Text>
-          <Text style={styles.textCenter}>Informações sobre a execução</Text>
-          <Text style={styles.text}>Repetições</Text>
-          <SelecionadorNumero
-            valor={serieAtual.repeticoes}
-            onChange={novoValor => {
-              if (novoValor <= 0) {
-                return;
-              }
-              alterarPropriedadesSerie({...serieAtual, repeticoes: novoValor});
-            }}
-            incrementos={[1, 5]}
-          />
-          <Text style={styles.text}>Peso</Text>
-          <SelecionadorNumero
-            valor={serieAtual.peso}
-            onChange={novoValor => {
-              if (novoValor <= 0) {
-                return;
-              }
-              alterarPropriedadesSerie({...serieAtual, peso: novoValor});
-            }}
-            incrementos={[1, 5, 10]}
-            suffix="kg"
-          />
-          <View style={styles.espacamento}></View>
-          <Button
-            nome="Cadastrar e começar próxima série"
-            onPress={() => {
-              const novaSerie = [
-                ...props.cadastroTreinoAtual.seriesConsolidadas,
-              ];
-              const totalRepouso = calcularTempoSegundos(
-                props.cadastroTreinoAtual.ultimoTimestamp!,
-              );
-              novaSerie[indiceSerieAtual] = {
-                repouso: totalRepouso,
-                ...serieAtual,
-              };
-              if (finalDeExercicio) {
-                props.onChange({
-                  ...props.cadastroTreinoAtual,
-                  seriesConsolidadas: novaSerie,
-                  estadoAtual: CadastroExercicioAtualEstado.REVISAO,
-                });
-              } else {
-                props.onChange({
-                  ...props.cadastroTreinoAtual,
-                  seriesConsolidadas: novaSerie,
-                  estadoAtual: CadastroExercicioAtualEstado.SERIE,
-                  ultimoTimestamp: new Date(),
-                });
-              }
-            }}
-          />
-        </>
+        <ExercicioAtualRepouso
+          onChange={props.onChange}
+          onFinish={props.onFinish}
+          cadastroTreinoAtual={props.cadastroTreinoAtual}
+          treino={props.treino}
+        />
       );
     case CadastroExercicioAtualEstado.REVISAO:
       return (
-        <>
-          <Text style={styles.estadoHeader}>Revisão do exercício</Text>
-          <View style={styles.revisaoSerie}>
-            <Text style={styles.revisaoSerieIndice}>#</Text>
-            <Text style={styles.revisaoSerieHeader}>Peso</Text>
-            <Text style={styles.revisaoSerieHeader}>Repetições</Text>
-            <Text style={styles.revisaoSerieHeader}>Duração</Text>
-            <Text style={styles.revisaoSerieHeader}>Repouso</Text>
-          </View>
-          {props.cadastroTreinoAtual.seriesConsolidadas.map((serie, index) => {
-            return (
-              <View key={index} style={styles.revisaoSerie}>
-                <Text style={styles.revisaoSerieIndice}>{index + 1}ª</Text>
-                <TextInput
-                  style={styles.revisaoSerieInputField}
-                  value={serie.peso.toString()}
-                />
-                <TextInput
-                  style={styles.revisaoSerieInputField}
-                  value={serie.repeticoes.toString()}
-                />
-                <TextInput
-                  style={styles.revisaoSerieInputField}
-                  value={serie.duracao.toString()}
-                />
-                <TextInput
-                  style={styles.revisaoSerieInputField}
-                  value={serie.repouso.toString()}
-                />
-              </View>
-            );
-          })}
-          <Button
-            nome="Próximo exercício"
-            onPress={() => {
-              props.onFinish();
-            }}
-          />
-        </>
+        <ExercicioAtualRevisao
+          onChange={props.onChange}
+          onFinish={props.onFinish}
+          cadastroTreinoAtual={props.cadastroTreinoAtual}
+          treino={props.treino}
+        />
       );
   }
 }
 
+function ExercicioAtualPreparar({
+  onChange,
+  cadastroTreinoAtual,
+}: CadastroExercicioAtualActionsProps) {
+  return (
+    <View style={styles.column}>
+      <Button
+        nome={'Começar série'}
+        onPress={() => {
+          onChange({
+            ...cadastroTreinoAtual,
+            estadoAtual: CadastroExercicioAtualEstado.SERIE,
+            ultimoTimestamp: new Date(),
+          });
+        }}
+      />
+    </View>
+  );
+}
+
+function ExercicioAtualExecucao({
+  onChange,
+  cadastroTreinoAtual,
+  treino,
+}: CadastroExercicioAtualActionsProps) {
+  const tempoExecucao = calcularTempoSegundos(
+    cadastroTreinoAtual.ultimoTimestamp!,
+  );
+  return (
+    <>
+      <Text style={styles.estadoHeader}>Tempo de execução</Text>
+      <Text style={styles.stopwatchTimer}>{formatarTempo(tempoExecucao)}</Text>
+      <Button
+        nome="Terminar execução"
+        onPress={() => {
+          onChange({
+            ...cadastroTreinoAtual,
+            seriesConsolidadas: [
+              ...cadastroTreinoAtual.seriesConsolidadas,
+              {
+                peso: cadastroTreinoAtual.seriesConsolidadas[0]?.peso || 1,
+                repeticoes:
+                  treino.listaExercicios[cadastroTreinoAtual.exercicio]
+                    ?.minRepeticoes || 1,
+                repouso: 0,
+                duracao: calcularTempoSegundos(
+                  cadastroTreinoAtual.ultimoTimestamp!,
+                ),
+              },
+            ],
+            estadoAtual: CadastroExercicioAtualEstado.REPOUSO,
+            ultimoTimestamp: new Date(),
+          });
+        }}
+      />
+    </>
+  );
+}
+
+function ExercicioAtualRepouso({
+  onChange,
+  cadastroTreinoAtual,
+  treino,
+}: CadastroExercicioAtualActionsProps) {
+  const tempoEsperando = calcularTempoSegundos(
+    cadastroTreinoAtual.ultimoTimestamp!,
+  );
+  const exercicio = treino.listaExercicios[cadastroTreinoAtual.exercicio!];
+  const repouso = exercicio.repousoSeries;
+  const tempoRestante = repouso - tempoEsperando;
+
+  const finalDeExercicio =
+    cadastroTreinoAtual.seriesConsolidadas.length === exercicio.series;
+  const indiceSerieAtual = cadastroTreinoAtual.seriesConsolidadas.length - 1;
+  const serieAtual = cadastroTreinoAtual.seriesConsolidadas[indiceSerieAtual];
+
+  function alterarPropriedadesSerie(serie: SerieExercicioSessao) {
+    const novaSerie = [...cadastroTreinoAtual.seriesConsolidadas];
+    novaSerie[indiceSerieAtual] = serie;
+    onChange({
+      ...cadastroTreinoAtual,
+      seriesConsolidadas: novaSerie,
+    });
+  }
+
+  function proximo(finalizarExercicio: boolean) {
+    const novaSerie = [...cadastroTreinoAtual.seriesConsolidadas];
+    const totalRepouso = calcularTempoSegundos(
+      cadastroTreinoAtual.ultimoTimestamp!,
+    );
+    novaSerie[indiceSerieAtual] = {
+      ...serieAtual,
+      repouso: totalRepouso,
+    };
+    if (finalizarExercicio) {
+      onChange({
+        ...cadastroTreinoAtual,
+        seriesConsolidadas: novaSerie,
+        estadoAtual: CadastroExercicioAtualEstado.REVISAO,
+      });
+    } else {
+      onChange({
+        ...cadastroTreinoAtual,
+        seriesConsolidadas: novaSerie,
+        estadoAtual: CadastroExercicioAtualEstado.SERIE,
+        ultimoTimestamp: new Date(),
+      });
+    }
+  }
+
+  return (
+    <>
+      <Text style={styles.estadoHeader}>Repouso</Text>
+      <Text
+        style={[
+          styles.estadoHeader,
+          {
+            color:
+              tempoRestante < 0 ? Cores.padrao.primary : Cores.padrao.text300,
+          },
+        ]}>
+        {tempoRestante < 0 ? '-' : ''}
+        {formatarTempo(Math.abs(tempoRestante))}
+      </Text>
+      <Text style={styles.textCenter}>Informações sobre a execução</Text>
+      <Text style={styles.text}>Repetições</Text>
+      <SelecionadorNumero
+        valor={serieAtual.repeticoes}
+        onChange={novoValor => {
+          if (novoValor <= 0) {
+            return;
+          }
+          alterarPropriedadesSerie({...serieAtual, repeticoes: novoValor});
+        }}
+        incrementos={[1, 5]}
+      />
+      <Text style={styles.text}>Peso</Text>
+      <SelecionadorNumero
+        valor={serieAtual.peso}
+        onChange={novoValor => {
+          if (novoValor <= 0) {
+            return;
+          }
+          alterarPropriedadesSerie({...serieAtual, peso: novoValor});
+        }}
+        incrementos={[1, 5, 10]}
+        suffix="kg"
+      />
+      <View style={styles.espacamento} />
+      <Button
+        nome="Cadastrar e começar próxima série"
+        onPress={() => proximo(finalDeExercicio)}
+      />
+      {!finalDeExercicio && (
+        <Button
+          nome="Cadastrar e finalizar exercício"
+          onPress={() => {
+            const pulandoSeries =
+              exercicio.series - cadastroTreinoAtual.seriesConsolidadas.length;
+            Alert.alert(
+              'Pular séries?',
+              `Finalizar agora estaria pulando ${pulandoSeries} série${
+                pulandoSeries > 1 ? 's' : ''
+              }.`,
+              [
+                {
+                  text: 'Cancelar',
+                  onPress: () => {},
+                },
+                {
+                  text: 'Pular',
+                  onPress: () => proximo(true),
+                },
+              ],
+            );
+          }}
+          cor={Cores.padrao.secondary}
+        />
+      )}
+    </>
+  );
+}
+
+function ExercicioAtualRevisao({
+  onFinish,
+  onChange,
+  cadastroTreinoAtual,
+  treino,
+}: CadastroExercicioAtualActionsProps) {
+  return (
+    <>
+      <Text style={styles.estadoHeader}>Revisão do exercício</Text>
+      <TabelaRevisaoExercicioProps
+        treino={treino}
+        onChange={series => {
+          onChange({...cadastroTreinoAtual, seriesConsolidadas: series});
+        }}
+        series={cadastroTreinoAtual.seriesConsolidadas}
+      />
+      <Button nome="Próximo exercício" onPress={onFinish} />
+    </>
+  );
+}
+
+type TabelaRevisaoExercicioProps = {
+  series: SerieExercicioSessao[];
+  onChange: (series: SerieExercicioSessao[]) => void;
+};
+
+function TabelaRevisaoExercicioProps(props: TabelaRevisaoExercicioProps) {
+  function alterarValorSerie(
+    novoValor: string,
+    serie: number,
+    alterarPropriedade: (
+      serie: SerieExercicioSessao,
+      novoValor: number,
+    ) => void,
+  ) {
+    const valor = parseInt(novoValor, 10);
+    if (isFinite(valor) && novoValor.length > 0) {
+      const novasSeries = [...props.series];
+      const novaSerie = novasSeries[serie];
+      alterarPropriedade(novaSerie, parseInt(novoValor, 10));
+      novasSeries[serie] = novaSerie;
+      props.onChange(novasSeries);
+    }
+  }
+
+  return (
+    <>
+      <View style={styles.revisaoSerie}>
+        <Text style={styles.revisaoSerieIndice}>#</Text>
+        <Text style={styles.revisaoSerieHeader}>Peso</Text>
+        <Text style={styles.revisaoSerieHeader}>Repetições</Text>
+        <Text style={styles.revisaoSerieHeader}>Duração</Text>
+        <Text style={styles.revisaoSerieHeader}>Repouso</Text>
+      </View>
+      {props.series.map((serie, index) => {
+        return (
+          <View key={index} style={styles.revisaoSerie}>
+            <Text style={styles.revisaoSerieIndice}>{index + 1}ª</Text>
+            <TextInput
+              style={styles.revisaoSerieInputField}
+              value={serie.peso.toString()}
+              keyboardType="numeric"
+              onChangeText={novoValorString =>
+                alterarValorSerie(
+                  novoValorString,
+                  index,
+                  (novaSerie, novoValor) => (novaSerie.peso = novoValor),
+                )
+              }
+            />
+            <TextInput
+              style={styles.revisaoSerieInputField}
+              value={serie.repeticoes.toString()}
+              keyboardType="numeric"
+              onChangeText={novoValorString =>
+                alterarValorSerie(
+                  novoValorString,
+                  index,
+                  (novaSerie, novoValor) => (novaSerie.repeticoes = novoValor),
+                )
+              }
+            />
+            <TextInput
+              style={styles.revisaoSerieInputField}
+              value={serie.duracao.toString()}
+              keyboardType="numeric"
+              onChangeText={novoValorString =>
+                alterarValorSerie(
+                  novoValorString,
+                  index,
+                  (novaSerie, novoValor) => (novaSerie.duracao = novoValor),
+                )
+              }
+            />
+            <TextInput
+              style={styles.revisaoSerieInputField}
+              value={serie.repouso.toString()}
+              keyboardType="numeric"
+              onChangeText={novoValorString =>
+                alterarValorSerie(
+                  novoValorString,
+                  index,
+                  (novaSerie, novoValor) => (novaSerie.repouso = novoValor),
+                )
+              }
+            />
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
 type CardExercicioProps = {
-  exercicio?: ExercicioSessao;
-  onExercicioChange: (exercicio: ExercicioSessao) => void;
+  exercicio: ExercicioTreino;
+  exercicioSessao?: ExercicioSessao;
+  onChange: (sessaoNova: ExercicioSessao) => void;
+  onClick: () => void;
 };
 
 function CardExercicio(props: CardExercicioProps) {
   return (
-    <View style={[styles.padding16, styles.card]}>
-      <Text>exercicio</Text>
+    <View style={styles.card}>
+      <ItemListaExercicio
+        exercicio={props.exercicio}
+        onClick={() => {
+          console.log('Clicou no exercício');
+          props.onClick();
+        }}
+      />
+      {props.exercicioSessao && (
+        <TabelaRevisaoExercicioProps
+          series={props.exercicioSessao.series}
+          onChange={novasSeries => {
+            props.onChange({...props.exercicioSessao!, series: novasSeries});
+          }}></TabelaRevisaoExercicioProps>
+      )}
     </View>
   );
 }
 
 type BarraProgressoExerciciosProps = {
-  exercicios: ExercicioSessao[];
+  exerciciosFinalizados: ExercicioSessao[];
+  exercicioAtual?: CadastroExercicioAtual;
   treino: Treino;
 };
 
@@ -416,28 +676,66 @@ function BarraProgressoExercicios(props: BarraProgressoExerciciosProps) {
   return (
     <View style={styles.barraProgressoExercicios}>
       {props.treino.listaExercicios.map((exercicio, index) => {
-        const execucao = props.exercicios.find(it => it.exercicio === index);
+        const execucao = props.exerciciosFinalizados.find(
+          it => it.exercicio === index,
+        );
+        const executando =
+          props.exercicioAtual?.exercicio === index
+            ? props.exercicioAtual
+            : undefined;
+        let corBarra =
+          execucao === undefined
+            ? Cores.padrao.background
+            : Cores.padrao.primary600;
+        let corIcone = Cores.padrao.accent;
+        if (execucao !== undefined) {
+          corIcone = Cores.padrao.primary;
+        } else if (props.exercicioAtual?.exercicio === index) {
+          corIcone = Cores.padrao.secondary;
+        }
         return (
-          <>
-            <View style={styles.segmentoBarraProgresso}>
-              <FontAwesome6Icon
-                style={styles.icone}
-                name={'dumbbell'}
-                size={16}
-                color={Cores.padrao.accent}
-              />
+          <View style={styles.segmentoBarraProgresso}>
+            <FontAwesome6Icon
+              style={styles.icone}
+              name={'dumbbell'}
+              size={8}
+              color={corIcone}
+            />
+            {props.exercicioAtual?.exercicio === index ? (
+              <View
+                style={[styles.parteBarraProgresso, {flexDirection: 'row'}]}>
+                {[...Array(exercicio.series).keys()].map(indexSerie => {
+                  const execucaoSerie =
+                    executando?.seriesConsolidadas[indexSerie];
+                  return (
+                    <View
+                      key={indexSerie + index * 100}
+                      style={[
+                        styles.parteBarraProgresso,
+                        {
+                          backgroundColor:
+                            execucaoSerie === undefined
+                              ? Cores.padrao.secondary400
+                              : Cores.padrao.primary600,
+                        },
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            ) : (
               <View
                 key={index}
                 style={[
                   styles.parteBarraProgresso,
                   {
                     flex: exercicio.series,
-                    flexGrow: 1,
-                    backgroundColor: Cores.padrao.background,
+                    backgroundColor: corBarra,
                   },
-                ]}></View>
-            </View>
-          </>
+                ]}
+              />
+            )}
+          </View>
         );
       })}
     </View>
@@ -445,6 +743,11 @@ function BarraProgressoExercicios(props: BarraProgressoExerciciosProps) {
 }
 
 const styles = StyleSheet.create({
+  chevron: {
+    height: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   espacamento: {
     height: 8,
   },
@@ -527,13 +830,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   parteBarraProgresso: {
-    height: 8,
+    flexGrow: 1,
+    height: 4,
     flex: 1,
+    marginRight: 1,
   },
   icone: {
     position: 'relative',
     zIndex: 1,
-    top: 12,
   },
   barraProgressoExercicios: {
     flexDirection: 'row',

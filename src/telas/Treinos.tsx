@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -90,7 +91,18 @@ export default function Treinos({navigation}: Props) {
               <ItemListaTiposTreino
                 key={item.index}
                 id={item.index}
-                onDelete={() => deletarTreino(item.index)}
+                onDelete={() => {
+                  Alert.alert('Deletar treino?', 'Essa ação é irreversível.', [
+                    {
+                      text: 'Cancelar',
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'Deletar',
+                      onPress: () => deletarTreino(item.index),
+                    },
+                  ]);
+                }}
                 onEdit={() => editarTreino(item.index)}
                 onOpen={() => abrirTreino(item.index)}
                 editing={editing}
