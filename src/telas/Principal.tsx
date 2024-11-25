@@ -7,6 +7,7 @@ import Cores from '../Cores.ts';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../App.tsx';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import FontAwesome5Icon from 'react-native-vector-icons/FontAwesome5';
 
 const Navegacao = createBottomTabNavigator();
 
@@ -36,7 +37,7 @@ function Principal(props: Props): React.JSX.Element {
     }}>
       <Navegacao.Screen options={{
         tabBarIcon: ({color}) => (
-          <Icon name="dumbbell" size={24} color={color}></Icon>
+          <FontAwesome5Icon name="dumbbell" size={24} color={color}></FontAwesome5Icon>
         ),
       }} name={"Treinos"} component={Treinos}></Navegacao.Screen>
       <Navegacao.Screen options={{
@@ -44,7 +45,11 @@ function Principal(props: Props): React.JSX.Element {
           <Icon name="history" size={24} color={color}></Icon>
         ),
       }} name={"Histórico"} component={Historico}></Navegacao.Screen>
-      <Navegacao.Screen name={"Dados"} component={Dados}></Navegacao.Screen>
+      <Navegacao.Screen options={{
+        tabBarIcon: ({color}) => (
+          <Icon name="database" size={24} color={color}></Icon>
+        ),
+      }} name={"Dados"} component={Dados}></Navegacao.Screen>
     </Navegacao.Navigator>
   );
 }

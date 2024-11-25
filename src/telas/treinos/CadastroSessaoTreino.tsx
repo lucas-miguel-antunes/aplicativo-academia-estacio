@@ -15,7 +15,7 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {RootStackParamList} from '../../App.tsx';
 import ItemListaTreino from '../../componentes/ItemListaTreino.tsx';
 import Cores from '../../Cores.ts';
-import {
+import GerenciadorDados, {
   ExercicioSessao,
   ExercicioTreino,
   SerieExercicioSessao,
@@ -53,6 +53,7 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
       seriesConsolidadas: [],
       estadoAtual: CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
     });
+  const gerenciadorDados = new GerenciadorDados();
 
   function alterarExercicio(exercicio: ExercicioSessao, idExercicio: number) {
     const novosExercicios = [...exercicios];
@@ -80,6 +81,20 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
       'hardwareBackPress',
       handleBackButtonClick,
     );
+
+    props.navigation.setOptions({
+      title: 'Sessão de treino ' + treino.letraTreino,
+      headerLeft: () => <View style={{width: 16}}></View>,
+      headerRight: () => (
+        <Icon
+          name={'close'}
+          size={24}
+          style={{marginRight: 16}}
+          onPress={() => handleBackButtonClick()}
+        />
+      ),
+    });
+
     return () => eventHandler.remove();
   }, []);
 
@@ -95,12 +110,74 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
     ]);
   }
 
+  function finalizarTreino() {
+    Alert.alert(
+      'Finalizar treino?',
+      'Você não vai poder mais alterar os dados.',
+      [
+        {
+          text: 'Cancelar',
+          onPress: () => {},
+        },
+        {
+          text: 'Finalizar',
+          onPress: async () => {
+            await gerenciadorDados.cadastrarSessaoTreino({
+              data: new Date(),
+              treino: idTreino,
+              exercicios,
+            });
+            props.navigation.goBack();
+          },
+        },
+      ],
+    );
+  }
+
+  function trocarTreino(index: number) {
+    if (cadastroTreinoAtual.exercicio === index) {
+      return;
+    }
+    if (
+      cadastroTreinoAtual.exercicio !== undefined &&
+      cadastroTreinoAtual.estadoAtual !==
+      CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE
+    ) {
+      Alert.alert(
+        'Trocar de exercício?',
+        'Isso vai finalizar o exercício atual.',
+        [
+          {
+            text: 'Cancelar',
+            onPress: () => {},
+          },
+          {
+            text: 'Trocar',
+            onPress: () =>
+              terminarExercicioAtual({
+                exercicio: index,
+                seriesConsolidadas: [],
+                estadoAtual:
+                CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
+              }),
+          },
+        ],
+      );
+    } else {
+      setCadastroTreinoAtual({
+        exercicio: index,
+        seriesConsolidadas: [],
+        estadoAtual:
+        CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
+      });
+    }
+
+  }
+
   return (
     <SafeAreaView>
       <ScrollView style={styles.container}>
-        <View style={styles.card}>
           <ItemListaTreino treino={treino} />
-        </View>
 
         <BarraProgressoExercicios
           exerciciosFinalizados={exercicios}
@@ -123,6 +200,10 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
           }
         />
 
+        <View style={styles.divisoriaExercicioAtual}>
+          <Text style={styles.textoDivisoriaExercicioAtual}>Exercícios</Text>
+        </View>
+
         {treino.listaExercicios.map((exercicio, index) => {
           return (
             <CardExercicio
@@ -132,47 +213,13 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
               onChange={novaSessao => {
                 alterarExercicio(novaSessao, index);
               }}
-              onClick={() => {
-                if (cadastroTreinoAtual.exercicio === index) {
-                  return;
-                }
-                if (
-                  cadastroTreinoAtual.exercicio !== undefined &&
-                  cadastroTreinoAtual.estadoAtual !==
-                    CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE
-                ) {
-                  Alert.alert(
-                    'Trocar de exercício?',
-                    'Isso vai finalizar o exercício atual.',
-                    [
-                      {
-                        text: 'Cancelar',
-                        onPress: () => {},
-                      },
-                      {
-                        text: 'Trocar',
-                        onPress: () =>
-                          terminarExercicioAtual({
-                            exercicio: index,
-                            seriesConsolidadas: [],
-                            estadoAtual:
-                              CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
-                          }),
-                      },
-                    ],
-                  );
-                } else {
-                  setCadastroTreinoAtual({
-                    exercicio: index,
-                    seriesConsolidadas: [],
-                    estadoAtual:
-                      CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
-                  });
-                }
-              }}
+              onClick={() => trocarTreino(index)}
             />
           );
         })}
+
+        <Button nome="Finalizar treino" onPress={() => finalizarTreino()} />
+        <View style={styles.espacamento}></View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -250,17 +297,31 @@ type CadastroExercicioAtualComponentProps = {
 function CadastroExercicioAtualComponent(
   props: CadastroExercicioAtualComponentProps,
 ) {
-  const numeroExercicioAtual =
-    props.cadastroTreinoAtual.exercicio !== undefined
-      ? props.cadastroTreinoAtual.exercicio
-      : props.ultimoExercicio !== undefined
-      ? props.ultimoExercicio + 1
-      : 0;
+  let numeroExercicioAtual = props.cadastroTreinoAtual.exercicio;
+  if (numeroExercicioAtual === undefined) {
+    let proximoExercicio =
+      props.ultimoExercicio === undefined ? 0 : props.ultimoExercicio + 1;
+    if (proximoExercicio >= props.treino.listaExercicios.length) {
+      return (
+        <View style={[styles.padding16, styles.card]}>
+          <Text style={styles.textHeader}>Fim dos exercícios</Text>
+          <Text style={styles.text}>
+            Revise os dados abaixo e clique em 'Finalizar treino' para concluir.
+          </Text>
+          <Text style={styles.text}>
+            Você ainda pode executar algum dos exercícios que pulou ao clicar
+            nele.
+          </Text>
+        </View>
+      );
+    }
+    numeroExercicioAtual = proximoExercicio;
+  }
   const exercicioAtual = props.treino.listaExercicios[numeroExercicioAtual];
 
   return (
     <View style={[styles.padding16, styles.card]}>
-      <Text style={styles.text}>Exercício atual</Text>
+      <Text style={styles.textHeader}>Exercício atual</Text>
       <ItemListaExercicio exercicio={exercicioAtual} />
       <CadastroExercicioAtualActions
         cadastroTreinoAtual={props.cadastroTreinoAtual}
@@ -655,12 +716,14 @@ function CardExercicio(props: CardExercicioProps) {
           props.onClick();
         }}
       />
-      {props.exercicioSessao && (
+      {props.exercicioSessao ? (
         <TabelaRevisaoExercicioProps
           series={props.exercicioSessao.series}
           onChange={novasSeries => {
             props.onChange({...props.exercicioSessao!, series: novasSeries});
           }}></TabelaRevisaoExercicioProps>
+      ) : (
+        <Text style={styles.naoExecutado}>Exercício não executado</Text>
       )}
     </View>
   );
@@ -814,7 +877,7 @@ const styles = StyleSheet.create({
   textHeader: {
     color: Cores.padrao.text,
     fontWeight: 'bold',
-    fontSize: 24,
+    fontSize: 16,
   },
   text: {
     color: Cores.padrao.text,
@@ -851,5 +914,18 @@ const styles = StyleSheet.create({
   container: {
     padding: 8,
     flexDirection: 'column',
+  },
+  naoExecutado: {
+    color: Cores.padrao.secondary,
+    padding: 16,
+    textAlign: 'center',
+  },
+  divisoriaExercicioAtual: {
+    marginVertical: 16,
+  },
+  textoDivisoriaExercicioAtual: {
+    color: Cores.padrao.secondary,
+    textAlign: 'center',
+    fontSize: 16,
   },
 });

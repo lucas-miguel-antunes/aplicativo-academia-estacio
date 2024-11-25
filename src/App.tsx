@@ -11,7 +11,7 @@ const Stack = createStackNavigator();
 export type RootStackParamList = {
   Principal: {};
   CadastroSessaoTreino: {
-    treino: Treino,
+    treino: Treino;
     idTreino: number;
   };
   CadastroTipoTreino: {
@@ -22,17 +22,18 @@ export type RootStackParamList = {
 export default function App(): React.JSX.Element {
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Principal">
-        <Stack.Screen options={{headerShown: false}} name={'Principal'} component={Principal}></Stack.Screen>
+      <Stack.Navigator initialRouteName="Principal">
+        <Stack.Screen
+          options={{headerShown: false}}
+          name={'Principal'}
+          component={Principal}></Stack.Screen>
         <Stack.Screen
           name={'CadastroTipoTreino'}
           component={CadastroTipoTreino}
-          options={{ title: 'Cadastro de treino' }}></Stack.Screen>
+          options={{title: 'Cadastro de treino'}}></Stack.Screen>
         <Stack.Screen
           name={'CadastroSessaoTreino'}
-          component={CadastroSessaoTreino}
-          options={{ title: 'Sessão de treino' }}></Stack.Screen>
+          component={CadastroSessaoTreino}></Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
