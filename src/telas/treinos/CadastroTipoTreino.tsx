@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -89,7 +90,14 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
   }
 
   async function salvarTreino() {
-    console.log('salvarTreino()');
+    if (titulo.length < 4) {
+      Alert.alert('Informe um nome para o treino', 'O nome deve ter no mínimo 4 caracteres.');
+      return;
+    }
+    if (listaExercicios.find(it => it.nomeExercicio.length < 4)) {
+      Alert.alert('Informe um nome para os exercícios', 'O nome deve ter no mínimo 4 caracteres.');
+      return;
+    }
     const treino = {
       nomeTreino: titulo,
       letraTreino: letraEscolhida,
@@ -104,42 +112,32 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
     props.navigation.goBack();
   }
 
+  const tags = [
+    {
+      texto: `${listaExercicios.length} exercícios`,
+      cor: Cores.padrao.primary,
+    },
+    {
+      texto: `${Math.ceil(tempoAtual / 60)} minutos`,
+      cor: Cores.padrao.primary,
+    },
+    ...[
+      ...new Set(
+        listaExercicios.map(it => it.principalGrupoMuscular),
+      ),
+    ].map(grupo => {
+      return {
+        texto: grupo,
+        cor: Cores.padrao.secondary,
+      };
+    }),
+  ];
+
   return (
     <SafeAreaView>
       <ScrollView>
         <View style={styles.container}>
-          <View style={[styles.card, {marginHorizontal: 0, flexWrap: 'wrap'}]}>
-            <View style={styles.tags}>
-              {[
-                {
-                  texto: `${listaExercicios.length} exercícios`,
-                  cor: Cores.padrao.primary,
-                },
-                {
-                  texto: `${Math.ceil(tempoAtual / 60)} minutos`,
-                  cor: Cores.padrao.primary,
-                },
-                ...[
-                  ...new Set(
-                    listaExercicios.map(it => it.principalGrupoMuscular),
-                  ),
-                ].map(grupo => {
-                  return {
-                    texto: grupo,
-                    cor: Cores.padrao.secondary,
-                  };
-                }),
-              ].map(item => {
-                return <PilulaTag texto={item.texto} cor={item.cor} />;
-              })}
-            </View>
-          </View>
-
-          <Text style={styles.textHeader}>Letra do Treino</Text>
-          <Text style={styles.subtext}>
-            Você pode decidir uma letra para cada treino, usando o sistema que
-            quiser para classificar a letra.
-          </Text>
+          <Text style={styles.subtext}>Escolha uma letra para identificar o seu treino.</Text>
           <View style={styles.escolhaLetras}>
             {['A', 'B', 'C', 'D', 'E', 'F'].map(letra => {
               const letraAtualEscolhida = letra === letraEscolhida;
@@ -171,6 +169,15 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
           />
 
           <Text style={styles.textHeader}>Exercícios</Text>
+
+          <View style={{marginVertical: 16, marginHorizontal: 0, flexWrap: 'wrap'}}>
+            <View style={styles.tags}>
+              {tags.map(item => {
+                return <PilulaTag texto={item.texto} cor={item.cor} />;
+              })}
+            </View>
+          </View>
+
           {listaExercicios.map((exercicio, index) => {
             return (
               <ListagemExercicioComponente
@@ -210,7 +217,7 @@ function ListagemExercicioComponente(props: ListagemExercicioProps) {
   return (
     <View style={styles.card}>
       <View style={styles.cabecalhoExercicio}>
-        <Text style={styles.textBoldHeader}>Exercício {props.index + 1}</Text>
+        <Text style={styles.textBoldHeader}></Text>
         <View style={styles.cabecalhoExercicioIcones}>
           {
             props.index > 0 && <Pressable onPress={() => props.onReorder(props.index - 1)}>

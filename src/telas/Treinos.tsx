@@ -68,29 +68,56 @@ export default function Treinos({navigation}: Props) {
     <SafeAreaView>
       {treinos ? (
         <FlatList
-          data={[...treinos, {adicionarAdividade: true}]}
-          renderItem={item =>
-            item.item.adicionarAdividade ? (
-              <>
-                {editing ? (
+          data={[{topo: true}, ...treinos, {adicionarAdividade: true}]}
+          renderItem={item => {
+            if (item.item.topo) {
+              return (
+                <>
+                  <View style={styles.topo}>
+                    <Text style={styles.textoTopo}>Acompanhe seus treinos</Text>
+                    <Text style={styles.texto}>Cadastre suas rotinas de treino para guardá-las.</Text>
+                    <Text style={styles.texto}>Selecione um dos treinos cadastrados abaixo para começar uma sessão de treino acompanhada.</Text>
+                  </View>
+                  {treinos === undefined || treinos.length === 0 ? (
+                    <View style={styles.topo}>
+                      <Text style={styles.textoTopo}>
+                        Nenhum treino cadastrado
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.topo}>
+                      <Text style={styles.textoTopo}>Treinos cadastrados</Text>
+                    </View>
+                  )}
+                </>
+              );
+            }
+            if (item.item.adicionarAdividade) {
+              return (
+                <>
+                  {treinos !== undefined &&
+                    treinos.length > 0 &&
+                    (editing ? (
+                      <Button
+                        name="Cancelar"
+                        onClick={() => setEditing(false)}></Button>
+                    ) : (
+                      <Button
+                        name="Editar os treinos"
+                        onClick={() => setEditing(true)}></Button>
+                    ))}
                   <Button
-                    name="Cancelar"
-                    onClick={() => setEditing(false)}></Button>
-                ) : (
-                  <Button
-                    name="Editar atividade"
-                    onClick={() => setEditing(true)}></Button>
-                )}
-                <Button
-                  name="Adicionar atividade"
-                  onClick={() =>
-                    navigation.push('CadastroTipoTreino', {})
-                  }></Button>
-              </>
-            ) : (
+                    name="Criar um novo treino"
+                    onClick={() =>
+                      navigation.push('CadastroTipoTreino', {})
+                    }></Button>
+                </>
+              );
+            }
+            return (
               <ItemListaTiposTreino
                 key={item.index}
-                id={item.index}
+                id={item.index - 1}
                 onDelete={() => {
                   Alert.alert('Deletar treino?', 'Essa ação é irreversível.', [
                     {
@@ -99,16 +126,16 @@ export default function Treinos({navigation}: Props) {
                     },
                     {
                       text: 'Deletar',
-                      onPress: () => deletarTreino(item.index),
+                      onPress: () => deletarTreino(item.index - 1),
                     },
                   ]);
                 }}
-                onEdit={() => editarTreino(item.index)}
-                onOpen={() => abrirTreino(item.index)}
+                onEdit={() => editarTreino(item.index - 1)}
+                onOpen={() => abrirTreino(item.index - 1)}
                 editing={editing}
                 treino={item.item}></ItemListaTiposTreino>
-            )
-          }
+            );
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -167,26 +194,24 @@ function ItemListaTiposTreino(props: ItemListaTiposTreinoProps) {
       elementoDireita={
         <View style={styles.chevron}>
           {editando ? (
-            <>
+            <View style={styles.containerIconesEditar}>
               <Icon
                 onPress={() => props.onEdit()}
+                style={styles.iconesEditar}
                 name={'pencil'}
-                size={24}
-                color={Cores.padrao.text}
+                size={16}
+                color={Cores.padrao.background}
               />
               <Icon
                 onPress={() => props.onDelete()}
+                style={styles.iconesEditar}
                 name={'trash'}
-                size={24}
-                color={Cores.padrao.text}
+                size={16}
+                color={Cores.padrao.background}
               />
-            </>
+            </View>
           ) : (
-            <Icon
-              name={'chevron-right'}
-              size={24}
-              color={Cores.padrao.text}
-            />
+            <Icon name={'chevron-right'} size={24} color={Cores.padrao.text} />
           )}
         </View>
       }>
@@ -200,7 +225,10 @@ function ItemListaTiposTreino(props: ItemListaTiposTreinoProps) {
       </View>
       <View style={[styles.tags, {marginTop: 8}]}>
         {gruposMusculares.map((grupo, index) => (
-          <PilulaTag key={index} texto={grupo} cor={Cores.padrao.secondary}></PilulaTag>
+          <PilulaTag
+            key={index}
+            texto={grupo}
+            cor={Cores.padrao.secondary}></PilulaTag>
         ))}
       </View>
     </ItemListaTreino>
@@ -212,6 +240,18 @@ const styles = StyleSheet.create({
     height: 64,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  containerIconesEditar: {
+    flexDirection: 'row',
+  },
+  iconesEditar: {
+    marginHorizontal: 8,
+    borderRadius: 32,
+    width: 32,
+    height: 32,
+    backgroundColor: Cores.padrao.secondary,
+    textAlign: 'center',
+    verticalAlign: 'middle',
   },
   containerLetraTreino: {
     width: 48,
@@ -255,5 +295,20 @@ const styles = StyleSheet.create({
     width: '90%',
     marginHorizontal: '5%',
     backgroundColor: Cores.padrao.background900,
+  },
+  topo: {
+    marginVertical: 8,
+  },
+  textoTopo: {
+    color: Cores.padrao.secondary,
+    textAlign: 'center',
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  texto: {
+    color: Cores.padrao.text,
+    fontSize: 16,
+    marginBottom: 8,
+    marginHorizontal: 16,
   },
 });
