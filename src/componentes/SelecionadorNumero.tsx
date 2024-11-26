@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   botaoNumeroSeries: {
     width: 32,
     height: 32,
-    margin: 8,
+    margin: 2,
     overflow: 'hidden',
     flexDirection: 'row',
     justifyContent: 'center',

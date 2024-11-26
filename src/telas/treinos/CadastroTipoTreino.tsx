@@ -192,11 +192,11 @@ export default function CadastroTipoTreino(props: Props): React.JSX.Element {
           })}
           <Button
             onClick={() => adicionarExercicio()}
-            texto="Adicionar exercício"></Button>
+            texto="Adicionar outro exercício"></Button>
           {listaExercicios.length > 0 && (
             <Button
               onClick={() => salvarTreino()}
-              texto="Salvar treino"></Button>
+              texto={editarTreino !== undefined ? "Salvar edições ao treino" : "Criar novo treino"}></Button>
           )}
         </View>
       </ScrollView>

@@ -44,10 +44,12 @@ type CadastroExercicioAtual = {
 
 export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
   const {treino, idTreino} = props.route.params;
-  let [execucaoExercicios, setExecucaoExercicios] = useState<ExercicioSessao[]>([]);
-  let [ultimoExercicioExecutado, setUltimoExercicioExecutado] = useState<number | undefined>(
-    undefined,
+  let [execucaoExercicios, setExecucaoExercicios] = useState<ExercicioSessao[]>(
+    [],
   );
+  let [ultimoExercicioExecutado, setUltimoExercicioExecutado] = useState<
+    number | undefined
+  >(undefined);
   let [cadastroTreinoAtual, setCadastroTreinoAtual] =
     useState<CadastroExercicioAtual>({
       seriesConsolidadas: [],
@@ -141,7 +143,7 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
     if (
       cadastroTreinoAtual.exercicio !== undefined &&
       cadastroTreinoAtual.estadoAtual !==
-      CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE
+        CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE
     ) {
       Alert.alert(
         'Trocar de exercício?',
@@ -157,8 +159,7 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
               terminarExercicioAtual({
                 exercicio: index,
                 seriesConsolidadas: [],
-                estadoAtual:
-                CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
+                estadoAtual: CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
               }),
           },
         ],
@@ -167,11 +168,9 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
       setCadastroTreinoAtual({
         exercicio: index,
         seriesConsolidadas: [],
-        estadoAtual:
-        CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
+        estadoAtual: CadastroExercicioAtualEstado.PREPARAR_INICIO_SERIE,
       });
     }
-
   }
 
   function calcularProximoExercicio() {
@@ -179,7 +178,13 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
       return undefined;
     }
     let numeroProximoExercicio = ultimoExercicioExecutado + 1;
-    while (execucaoExercicios.find(it => it.exercicio === numeroProximoExercicio) && numeroProximoExercicio < treino.listaExercicios.length) {
+    while (numeroProximoExercicio < treino.listaExercicios.length) {
+      const exercicioJaExecutado = execucaoExercicios.find(
+        it => it.exercicio === numeroProximoExercicio,
+      );
+      if (exercicioJaExecutado === undefined) {
+        break;
+      }
       numeroProximoExercicio++;
     }
     return numeroProximoExercicio;
@@ -220,7 +225,9 @@ export default function CadastroSessaoTreino(props: Props): React.JSX.Element {
             <CardExercicio
               key={index}
               exercicio={exercicio}
-              exercicioSessao={execucaoExercicios.find(it => it.exercicio === index)}
+              exercicioSessao={execucaoExercicios.find(
+                it => it.exercicio === index,
+              )}
               onChange={novaSessao => {
                 alterarExercicio(novaSessao, index);
               }}
@@ -311,7 +318,7 @@ function CadastroExercicioAtualComponent(
   let numeroExercicioAtual = props.cadastroTreinoAtual.exercicio;
   if (numeroExercicioAtual === undefined) {
     let proximoExercicio =
-      props.proximoExercicio === undefined ? 0 : props.proximoExercicio + 1;
+      props.proximoExercicio === undefined ? 0 : props.proximoExercicio;
     if (proximoExercicio >= props.treino.listaExercicios.length) {
       return (
         <View style={[styles.padding16, styles.card]}>
